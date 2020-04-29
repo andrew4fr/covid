@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\Request;
 
 class Application extends BaseApplication
 {
-
     public function __construct(array $values = array())
     {
         parent::__construct($values);
