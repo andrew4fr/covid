@@ -2,8 +2,11 @@
 
 require_once __DIR__.'/../vendor/autoload.php';
 
-use AK\Covid\Application;
-use AK\Covid\SpreadSheet;
+use AK\Covid\{
+    Application,
+    SpreadSheet,
+    ScreamAPI
+};
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -16,10 +19,11 @@ $app = new Application([
 $app->get('/', function(Application $app, Request $req) {
     $ss = new SpreadSheet($app, $req);
     try {
+        $api = new ScreamAPI($req);
         $data = $ss->getData();
+        $api->send($data);
         $response = [
             'status' => ['code' => 200, 'description' => 'ok'],
-            'answer' => $data
         ];
     } catch (Exception $e) {
         $response = [

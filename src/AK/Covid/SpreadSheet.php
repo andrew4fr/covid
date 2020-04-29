@@ -5,6 +5,7 @@ namespace AK\Covid;
 use Symfony\Component\HttpFoundation\Request;
 use Google_Client;
 use Google_Service_Sheets;
+use Exception;
 
 class SpreadSheet {
     const HEADERS_RANGE = 'A1:I1';
@@ -52,10 +53,17 @@ class SpreadSheet {
         $headersRange =  sprintf('%s!%s', $query['ActiveSheetName'], self::HEADERS_RANGE);
         $dataRange = sprintf('%s!%s', $query['ActiveSheetName'], sprintf(self::DATA_RANGE, $query['rangeStart'], $query['rangeEnd']));
         $response = $service->spreadsheets_values->batchGet($spreadsheetId, ['ranges' => [$headersRange, $dataRange]]);
+
         $valueRanges = $response->getValueRanges();
 
         $headers = self::getValues($valueRanges, $headersRange)[0];
+        if (count($headers) == 0) {
+            throw new Exception("Headers not found");
+        }
         $data = self::getValues($valueRanges, $dataRange);
+        if (count($data) == 0) {
+            throw new Exception("Data not found");
+        }
 
         $mappedHeaders = $this->mapHeaders($headers);
         $mappedData = $this->mapData($mappedHeaders, $data);
