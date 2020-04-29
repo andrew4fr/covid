@@ -30,15 +30,14 @@ class ScreamAPI {
 
         foreach ($data as $d) {
             $event = [
-                'query' => ['accessToken' => $this->token],
-                'json' => [
-                    'address' => trim(sprintf('%s %s', $d['area'], $d['address'])),
-                    'request_author' => $d['request_author'],
-                    'sender_name' => $d['sender_name'],
+                'category' => $d['category'],
+                'location' => [
+                    'address' => ['address' => trim(sprintf('%s %s', $d['area'], $d['address']))],
                 ],
+                'request_author' => $d['request_author'],
+                'sender_name' => $d['sender_name'],
                 'messsage' => $d['message'],
                 'ttl' => $d['ttl'],
-                'category' => $d['category'],
                 'status' => 'new',
                 'date' => $d['date']
             ];
@@ -51,11 +50,11 @@ class ScreamAPI {
                     'content' => json_encode($event)
                 ]
             ];
-            var_dump($options);
-            $stream = stream_context_create($options);
+            $url = sprintf('%s/%s?accessToken=%s', self::SCREAM_API_URL, 'screams/create', rawurlencode($this->token));
 
-            $answer = @file_get_contents(sprintf('%s/%s', self::SCREAM_API_URL, 'screams/create'), false, $stream);
-            var_dump($answer);
+            $stream = stream_context_create($options);
+            $answer = @file_get_contents($url, false, $stream);
+
             $code = self::getCode($http_response_header);
             if (!in_array($code, [200, 201])) {
                 throw Exception(sprintf('Scream API error: %s', $answer));

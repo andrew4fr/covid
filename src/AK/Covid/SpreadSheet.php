@@ -26,7 +26,7 @@ class SpreadSheet {
     ];
 
     protected static $defaults = [
-        'message' => '',
+        'message' => 'default message',
         'category' => 'default_category',
         'ttl' => '10',
         'request_author' => '',
