@@ -57,7 +57,7 @@ class ScreamAPI {
 
             $code = self::getCode($http_response_header);
             if (!in_array($code, [200, 201])) {
-                throw Exception(sprintf('Scream API error: %s', $answer));
+                throw new Exception(sprintf('Scream API error: %s', $answer));
             }
             sleep(1);
         }

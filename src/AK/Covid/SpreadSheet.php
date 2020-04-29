@@ -5,14 +5,16 @@ namespace AK\Covid;
 use Symfony\Component\HttpFoundation\Request;
 use Google_Client;
 use Google_Service_Sheets;
+use Google_Service_Sheets_BatchUpdateSpreadsheetRequest;
+use Google_Service_Sheets_Request;
 use Exception;
 
 class SpreadSheet {
     const HEADERS_RANGE = 'A1:I1';
     const DATA_RANGE = 'A%d:I%d';
 
-    protected $app;
-    protected $req;
+    protected $service;
+    protected $query;
 
     protected static $fields = [
         'message' => ['message', 'сообщение'],
@@ -31,28 +33,26 @@ class SpreadSheet {
         'ttl' => '10',
         'request_author' => '',
         'sender_name' => '',
-        'address' => '',
+        'address' => 'Vilnius,  Lithuania',
         'area' => '',
     ];
 
+    // SpredSheetID={ssid}&ActiveSheetName={sheetName}&range={range}&rangeStart={rangeStart}&rangeEnd={rangeEnd}&resultColumn={resultColumn}&callBack={callback}
     public function __construct(Application $app, Request $req)
     {
-        $this->app = $app;
-        $this->req = $req;
+        $this->query = $req->query->all();
+        $client = self::getClient($app['credentials_file'], $app['token'], $app['token_file']);
+        $this->service = new Google_Service_Sheets($client);
         self::$defaults['date'] = date('Y-m-d');
     }
 
     public function getData()
     {
-        // SpredSheetID={ssid}&ActiveSheetName={sheetName}&range={range}&rangeStart={rangeStart}&rangeEnd={rangeEnd}&resultColumn={resultColumn}&callBack={callback}
-        $query = $this->req->query->all();
-        $client = $this->getClient();
-        $service = new Google_Service_Sheets($client);
-        $spreadsheetId = $query['SpreadSheetId'];
+        $spreadsheetId = $this->query['SpreadSheetId'];
 
-        $headersRange =  sprintf('%s!%s', $query['ActiveSheetName'], self::HEADERS_RANGE);
-        $dataRange = sprintf('%s!%s', $query['ActiveSheetName'], sprintf(self::DATA_RANGE, $query['rangeStart'], $query['rangeEnd']));
-        $response = $service->spreadsheets_values->batchGet($spreadsheetId, ['ranges' => [$headersRange, $dataRange]]);
+        $headersRange =  sprintf('%s!%s', $this->query['ActiveSheetName'], self::HEADERS_RANGE);
+        $dataRange = sprintf('%s!%s', $this->query['ActiveSheetName'], sprintf(self::DATA_RANGE, $this->query['rangeStart'], $this->query['rangeEnd']));
+        $response = $this->service->spreadsheets_values->batchGet($spreadsheetId, ['ranges' => [$headersRange, $dataRange]]);
 
         $valueRanges = $response->getValueRanges();
 
@@ -70,20 +70,56 @@ class SpreadSheet {
         return $mappedData;
     }
 
-    private function getClient()
+    public function updateSheet()
+    {
+        $spreadsheetId = $this->query['SpreadSheetId'];
+        $sheetId = $this->query['ActiveSheetName'];
+
+        $resultColumn = $this->query['resultColumn'];
+        $startRow = $this->query['rangeStart'];
+        $endRow = $this->query['rangeEnd'];
+
+        $range = [
+            "sheetId" => 0,
+            "startRowIndex" => $startRow - 1,
+            "endRowIndex" =>  $endRow,
+            "startColumnIndex" => $resultColumn - 1,
+            "endColumnIndex" => $resultColumn,
+        ];
+
+        $requests = [
+            new Google_Service_Sheets_Request([
+                'repeatCell' => [
+                    'range' => $range,
+                    'cell' => [
+                        'userEnteredValue' => ['stringValue' => 'sent'],
+                    ],
+                    'fields' => 'userEnteredValue'
+                ]
+            ])
+        ];
+
+        $batchUpdateRequest = new Google_Service_Sheets_BatchUpdateSpreadsheetRequest([
+            'requests' => $requests
+        ]);
+
+        $response = $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdateRequest);
+    }
+
+    private static function getClient($credentialsFile, $token, $tokenFile)
     {
         $client = new Google_Client();
         $client->setApplicationName('Maneki');
-        $client->setScopes(Google_Service_Sheets::SPREADSHEETS_READONLY);
-        $client->setAuthConfig($this->app['credentials_file']);
+        $client->setScopes(Google_Service_Sheets::SPREADSHEETS);
+        $client->setAuthConfig($credentialsFile);
         $client->setAccessType('offline');
-        $client->setAccessToken($this->app['token']);
+        $client->setAccessToken($token);
 
         if ($client->isAccessTokenExpired()) {
             if ($client->getRefreshToken()) {
                 $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
             }
-            file_put_contents($this->app['token_file'], json_encode($client->getAccessToken()));
+            file_put_contents($tokenFile, json_encode($client->getAccessToken()));
         }
         return $client;
     }

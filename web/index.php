@@ -22,6 +22,7 @@ $app->get('/', function(Application $app, Request $req) {
         $api = new ScreamAPI($req);
         $data = $ss->getData();
         $api->send($data);
+        $ss->updateSheet();
         $response = [
             'status' => ['code' => 200, 'description' => 'ok'],
         ];
