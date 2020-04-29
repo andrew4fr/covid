@@ -67,7 +67,7 @@ class SpreadSheet {
 
         $mappedHeaders = $this->mapHeaders($headers);
         $mappedData = $this->mapData($mappedHeaders, $data);
-        return [$mappedData];
+        return $mappedData;
     }
 
     private function getClient()

@@ -13,7 +13,7 @@ class ScreamAPI {
 
     public function __construct(Request $req)
     {
-        $token = $req->request->get(TOKEN_PARAM);
+        $token = $req->query->get(self::TOKEN_PARAM);
         if (!$token) {
             throw new Exception('Scream API access token not found');
         }
@@ -51,9 +51,11 @@ class ScreamAPI {
                     'content' => json_encode($event)
                 ]
             ];
+            var_dump($options);
             $stream = stream_context_create($options);
 
             $answer = @file_get_contents(sprintf('%s/%s', self::SCREAM_API_URL, 'screams/create'), false, $stream);
+            var_dump($answer);
             $code = self::getCode($http_response_header);
             if (!in_array($code, [200, 201])) {
                 throw Exception(sprintf('Scream API error: %s', $answer));
