@@ -21,8 +21,8 @@ $app->get('/', function(Application $app, Request $req) {
     try {
         $api = new ScreamAPI($req);
         $data = $ss->getData();
-        $api->send($data);
-        $ss->updateSheet();
+        $ids = $api->send($data['data']);
+        $ss->updateSheet($ids, $data['result_column']);
         $response = [
             'status' => ['code' => 200, 'description' => 'ok'],
         ];

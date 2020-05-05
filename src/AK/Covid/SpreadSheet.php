@@ -70,40 +70,26 @@ class SpreadSheet {
         return $mappedData;
     }
 
-    public function updateSheet()
+    public function updateSheet($ids, $resultColumn)
     {
+        $values = [];
+        foreach ($ids as $id) {
+            $values[] =[$id];
+        }
+
         $spreadsheetId = $this->query['SpreadSheetId'];
         $sheetId = $this->query['ActiveSheetName'];
-
-        $resultColumn = $this->query['resultColumn'];
         $startRow = $this->query['rangeStart'];
-        $endRow = $this->query['rangeEnd'];
+        $columnLetter = self::stringFromColumnIndex($resultColumn);
 
-        $range = [
-            "sheetId" => 0,
-            "startRowIndex" => $startRow - 1,
-            "endRowIndex" =>  $endRow,
-            "startColumnIndex" => $resultColumn - 1,
-            "endColumnIndex" => $resultColumn,
-        ];
+        $range = sprintf('%s!%s%d', $spreadsheetId, $columnLetter, $startRow);
 
-        $requests = [
-            new Google_Service_Sheets_Request([
-                'repeatCell' => [
-                    'range' => $range,
-                    'cell' => [
-                        'userEnteredValue' => ['stringValue' => 'sent'],
-                    ],
-                    'fields' => 'userEnteredValue'
-                ]
-            ])
-        ];
+        $request = new Google_Service_Sheets_ValueRange();
+        $request->setMajorDimension('ROWS');
+        $request->setValues($values);
 
-        $batchUpdateRequest = new Google_Service_Sheets_BatchUpdateSpreadsheetRequest([
-            'requests' => $requests
-        ]);
+        $service->spreadsheets_values->update($spreadsheetId, $range, $request, ['valueInputOption' => 'USER_ENTERED']);
 
-        $response = $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdateRequest);
     }
 
     private static function getClient($credentialsFile, $token, $tokenFile)
@@ -169,5 +155,18 @@ class SpreadSheet {
         }
 
         return $results;
+    }
+
+    public static function stringFromColumnIndex($columnIndex)
+    {
+        $indexValue = $columnIndex;
+        $base26 = null;
+        do {
+            $characterValue = ($indexValue % 26) ?: 26;
+            $indexValue = ($indexValue - $characterValue) / 26;
+            $base26 = chr($characterValue + 64) . ($base26 ?: '');
+        } while ($indexValue > 0);
+
+        return $base26;
     }
 }

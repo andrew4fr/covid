@@ -23,11 +23,11 @@ class ScreamAPI {
 
     public function send($data)
     {
-
         $headers = [
             'Content-type: application/json; charset=utf8',
         ];
 
+        $ids = [];
         foreach ($data as $d) {
             $event = [
                 'category' => $d['category'],
@@ -59,8 +59,11 @@ class ScreamAPI {
             if (!in_array($code, [200, 201])) {
                 throw new Exception(sprintf('Scream API error: %s', $answer));
             }
+            $ids[] = $answer['id'];
             sleep(1);
         }
+
+        return $ids;
     }
 
     private static function getCode($headers) {
